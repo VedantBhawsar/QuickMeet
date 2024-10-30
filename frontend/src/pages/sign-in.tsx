@@ -1,4 +1,57 @@
+import toast from "react-hot-toast";
+import axiosApi from "../services/apiServices";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { useEffect } from "react";
+
 export default function SignInPage() {
+  const navigate = useNavigate();
+  const { user, setUser } = useAuth();
+
+  console.log(user);
+
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user]);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email");
+    const password = formData.get("password");
+    try {
+      const {
+        data,
+      }: {
+        data: { token: string };
+      } = await toast.promise(
+        new Promise((resolve) =>
+          resolve(
+            axiosApi.post("/login", {
+              email,
+              password,
+            })
+          )
+        ),
+        {
+          loading: "loading...",
+          success: "User logged in successfully",
+          error: "Error logging in user",
+        }
+      );
+
+      alert(JSON.stringify(data));
+      localStorage.setItem("token", data.token);
+      setUser(data);
+    } catch (error: any) {
+      console.log(error);
+      console.log(error?.response?.data);
+    }
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-full  text-white max-w-lg">
       <div className="w-full max-w-lg min-w-96 bg-gray-800 rounded-lg p-6  shadow-2xl">
@@ -6,13 +59,15 @@ export default function SignInPage() {
           Login
         </h2>
 
-        <form className="flex flex-col space-y-4">
+        <form className="flex flex-col space-y-4" onSubmit={handleSubmit}>
           <input
             type="email"
+            name="email"
             placeholder="Email"
             className="p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <input
+            name="password"
             type="password"
             placeholder="Password"
             className="p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"

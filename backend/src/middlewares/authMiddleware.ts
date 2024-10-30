@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwtService from "../utils/jwt";
 
-interface RequestWithUser extends Request {
-  userId: string;
+export interface RequestWithUser extends Request {
+  userId?: string;
 }
 
 export const authMiddleware = async (
@@ -10,21 +10,29 @@ export const authMiddleware = async (
   res: Response,
   next: NextFunction
 ) => {
-  const token = req.headers.authorization;
+  const authHeader = req.headers.authorization;
+  const token = authHeader ? authHeader.split(" ")[1] : undefined;
+
   if (!token) {
-    return res.status(401).json({ message: "Unauthorized" });
+    res.status(401).json({ message: "Authorization token is missing" });
+    return;
   }
 
   try {
+    await jwtService.verifyToken(token);
     const decoded = await jwtService.decodeToken(token);
+
     if (!decoded) {
-      return res
-        .status(401)
-        .json({ message: "Authorization token is invalid" });
+      res.status(401).json({ message: "Authorization token is invalid" });
+      return;
     }
+
     req.userId = decoded.userId;
     next();
   } catch (error: any) {
-    return res.status(401).json({ message: "Authorization token is invalid" });
+    console.log(error.message);
+    res
+      .status(401)
+      .json({ message: error.message || "Authorization token is invalid" });
   }
 };

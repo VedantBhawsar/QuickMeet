@@ -1,12 +1,29 @@
+import toast from "react-hot-toast";
 import { Button } from "../component/header";
+import { useAuth } from "../contexts/AuthContext";
+import axiosApi from "../services/apiServices";
+import { useNavigate } from "react-router-dom";
 
 export default function HomePage() {
+  const navigate = useNavigate();
   async function joinMeet() {
-    // Generate a random ID for joining a meeting
+    const meetingId = await prompt("Enter Meeting id");
+    console.log(meetingId);
   }
 
   async function createMeet() {
-    // Generate a new meeting slug for a unique meeting link
+    try {
+      const { data } = await axiosApi.post("/start-meeting", {
+        title: "test",
+        description: "this is test data",
+      });
+      console.log(data);
+      toast.success("meet created successfully");
+      navigate("/m/" + data.accessCode);
+    } catch (error: any) {
+      alert(JSON.stringify(error));
+      console.log(error);
+    }
   }
 
   return (
@@ -25,6 +42,7 @@ export default function HomePage() {
           >
             Join Meet
           </Button>
+          <hr className="border-gray-600" />
           <Button
             onClick={createMeet}
             className="p-4 w-full bg-gray-700 text-white rounded-lg shadow-md hover:bg-gray-600 transition-colors duration-300 transform "
