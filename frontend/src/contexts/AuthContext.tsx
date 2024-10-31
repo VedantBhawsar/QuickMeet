@@ -11,7 +11,6 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosApi from "../services/apiServices";
-import toast from "react-hot-toast";
 
 interface AuthContextType {
   user: User | null;

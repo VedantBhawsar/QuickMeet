@@ -1,6 +1,5 @@
 import toast from "react-hot-toast";
 import { Button } from "../component/header";
-import { useAuth } from "../contexts/AuthContext";
 import axiosApi from "../services/apiServices";
 import { useNavigate } from "react-router-dom";
 

@@ -2,13 +2,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { IoCall } from "react-icons/io5";
 import { BiCamera, BiCopy } from "react-icons/bi";
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSocket } from "../contexts/SocketContext";
 import PeerService from "../services/peer";
 import { MdMic } from "react-icons/md";
 import { useAuth } from "../contexts/AuthContext";
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
