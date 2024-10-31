@@ -8,45 +8,79 @@ import PeerService from "../services/peer";
 import { MdMic } from "react-icons/md";
 import { useAuth } from "../contexts/AuthContext";
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export default function MeetingPage() {
-  const { meetingId } = useParams();
+  const { meetingId } = useParams<{ meetingId: string }>();
   const { socket } = useSocket();
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [myStream, setMyStream] = useState<MediaStream | null>(null);
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [remoteSocketId, setRemoteSocketId] = useState<string | null>(null);
-  const [isAudio, setIsAudio] = useState(true);
+  const [isAudio, setIsAudio] = useState(false);
   const [isVideo, setIsVideo] = useState(false);
+  const [isInitiator, setIsInitiator] = useState(false);
 
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Handle local media stream
-  useEffect(() => {
-    const getStream = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+  const setupMediaStream = async () => {
+    try {
+      // Stop existing tracks
+      if (myStream) {
+        myStream.getTracks().forEach((track) => track.stop());
+      }
+
+      // Only request media if either audio or video is enabled
+      if (isAudio || isVideo) {
+        const newStream = await navigator.mediaDevices.getUserMedia({
           video: isVideo,
           audio: isAudio,
         });
-        setMyStream(stream);
+
+        setMyStream(newStream);
         if (myVideoRef.current) {
-          myVideoRef.current.srcObject = stream;
+          myVideoRef.current.srcObject = newStream;
         }
-        // Add tracks to peer connection if we have a remote peer
+
+        // If we're already connected to a peer, update the stream
         if (remoteSocketId) {
-          PeerService.addTrack(stream);
+          PeerService.addStream(newStream);
+          if (isInitiator) {
+            initiateCall(remoteSocketId);
+          }
         }
-      } catch (error) {
-        console.error("Error accessing media devices:", error);
-        toast.error("Failed to access camera/microphone");
+      } else {
+        setMyStream(null);
+        if (myVideoRef.current) {
+          myVideoRef.current.srcObject = null;
+        }
       }
-    };
+    } catch (error) {
+      console.error("Error accessing media devices:", error);
+      toast.error("Failed to access camera/microphone");
+    }
+  };
 
-    getStream();
+  const initiateCall = async (socketId: string) => {
+    try {
+      if (myStream) {
+        PeerService.addStream(myStream);
+      }
+      const offer = await PeerService.createOffer();
+      socket.emit("user:call", { to: socketId, offer });
+    } catch (error) {
+      console.error("Error initiating call:", error);
+    }
+  };
 
+  useEffect(() => {
+    setupMediaStream();
     return () => {
       if (myStream) {
         myStream.getTracks().forEach((track) => track.stop());
@@ -54,43 +88,64 @@ export default function MeetingPage() {
     };
   }, [isVideo, isAudio]);
 
-  // Set up socket event listeners
   useEffect(() => {
-    if (!socket || !user) return;
+    if (!socket || !user || !meetingId) return;
+
+    // Subscribe to remote peer tracks
+    PeerService.subscribeToTrack((stream) => {
+      console.log("Received remote stream");
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+      }
+    });
 
     // Handle when another user joins
-    socket.on("user-joined", (data) => {
-      console.log("User joined:", data);
-      if (user.id !== data.id) {
-        setRemoteSocketId(data.socketId);
-        toast.success(`${data.name} joined the meeting`);
-        handleCallUser(data.socketId); // Automatically call the new user
+    socket.on(
+      "user-joined",
+      async (data: { id: string; socketId: string; name: string }) => {
+        if (user.id !== data.id) {
+          setRemoteSocketId(data.socketId);
+          setIsInitiator(true);
+          toast.success(`${data.name} joined the meeting`);
+          // Automatically initiate the call
+          await initiateCall(data.socketId);
+        }
       }
-    });
+    );
 
-    // Handle incoming calls
+    // Handle incoming call
     socket.on("incomming:call", async ({ from, offer }) => {
-      console.log("Incoming call from:", from);
-      setRemoteSocketId(from);
-      const ans = await PeerService.getAnswer(offer);
-      if (ans) socket.emit("call:accepted", { to: from, ans });
+      try {
+        console.log("Received call from:", from);
+        setRemoteSocketId(from);
+        setIsInitiator(false);
 
-      if (myStream) {
-        PeerService.addTrack(myStream);
+        // Add local stream if available
+        if (myStream) {
+          PeerService.addStream(myStream);
+        }
+
+        const answer = await PeerService.handleOffer(offer);
+        socket.emit("call:accepted", { to: from, ans: answer });
+      } catch (error) {
+        console.error("Error handling incoming call:", error);
       }
     });
 
-    // Handle accepted calls
+    // Handle call accepted
     socket.on("call:accepted", async ({ from, ans }) => {
-      console.log("Call accepted by:", from);
-      await PeerService.setRemoteDescription(ans);
-      setRemoteStream(PeerService.getRemoteStream());
+      try {
+        console.log("Call accepted by:", from);
+        await PeerService.setRemoteAnswer(ans);
+      } catch (error) {
+        console.error("Error handling accepted call:", error);
+      }
     });
 
     // Handle user leaving
-    socket.on("user-left", (data) => {
+    socket.on("user-left", (data: { email: string }) => {
       setRemoteSocketId(null);
-      setRemoteStream(null);
+      setIsInitiator(false);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = null;
       }
@@ -99,7 +154,7 @@ export default function MeetingPage() {
 
     // Join the meeting room
     socket.emit("join-meeting", {
-      meetingId: meetingId,
+      meetingId,
       userId: user.id,
     });
 
@@ -111,20 +166,6 @@ export default function MeetingPage() {
       PeerService.close();
     };
   }, [socket, user, meetingId, myStream]);
-
-  // Update remote video when remote stream changes
-  useEffect(() => {
-    if (remoteStream && remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream]);
-
-  const handleCallUser = async (socketId: string) => {
-    const offer = await PeerService.getOffer();
-    if (offer) {
-      socket.emit("user:call", { to: socketId, offer });
-    }
-  };
 
   const copyUrl = async () => {
     try {
@@ -149,13 +190,19 @@ export default function MeetingPage() {
       <div className="grid grid-cols-2 gap-6 p-10">
         <div className="flex justify-center items-center">
           <div className="bg-gray-800 h-64 w-[28rem] rounded-lg border-4 border-gray-700 shadow-lg">
-            <video
-              ref={myVideoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover rounded-lg"
-            />
+            {isVideo ? (
+              <video
+                ref={myVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover rounded-lg"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-400">Camera Off</p>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex justify-center items-center">
@@ -166,6 +213,11 @@ export default function MeetingPage() {
               playsInline
               className="w-full h-full object-cover rounded-lg"
             />
+            {!remoteSocketId && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <p className="text-gray-400">Waiting for others to join...</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

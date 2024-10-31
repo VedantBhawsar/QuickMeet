@@ -1,13 +1,12 @@
 class PeerService {
-  private peer: RTCPeerConnection | null = null;
-  private remoteStream: MediaStream | null = null;
+  private peer: RTCPeerConnection;
 
   constructor() {
-    this.createPeerConnection();
+    this.peer = this.createPeerConnection();
   }
 
-  private createPeerConnection() {
-    this.peer = new RTCPeerConnection({
+  private createPeerConnection(): RTCPeerConnection {
+    const peer = new RTCPeerConnection({
       iceServers: [
         {
           urls: [
@@ -18,62 +17,51 @@ class PeerService {
       ],
     });
 
-    this.peer.ontrack = (event) => {
-      this.remoteStream = event.streams[0];
+    peer.onconnectionstatechange = () => {
+      console.log("Connection state:", peer.connectionState);
     };
+
+    return peer;
   }
 
-  async getOffer(): Promise<RTCSessionDescriptionInit | undefined> {
-    try {
-      if (!this.peer) this.createPeerConnection();
-      const offer = await this.peer!.createOffer();
-      await this.peer!.setLocalDescription(offer);
-      return offer;
-    } catch (error) {
-      console.error("Error creating offer:", error);
-    }
+  public async createOffer(): Promise<RTCSessionDescriptionInit> {
+    const offer = await this.peer.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: true,
+    });
+    await this.peer.setLocalDescription(new RTCSessionDescription(offer));
+    return offer;
   }
 
-  async getAnswer(
+  public async handleOffer(
     offer: RTCSessionDescriptionInit
-  ): Promise<RTCSessionDescriptionInit | undefined> {
-    try {
-      if (!this.peer) this.createPeerConnection();
-      await this.peer!.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await this.peer!.createAnswer();
-      await this.peer!.setLocalDescription(answer);
-      return answer;
-    } catch (error) {
-      console.error("Error creating answer:", error);
-    }
+  ): Promise<RTCSessionDescriptionInit> {
+    await this.peer.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await this.peer.createAnswer();
+    await this.peer.setLocalDescription(new RTCSessionDescription(answer));
+    return answer;
   }
 
-  async setRemoteDescription(sdp: RTCSessionDescriptionInit): Promise<void> {
-    try {
-      if (!this.peer) this.createPeerConnection();
-      await this.peer!.setRemoteDescription(new RTCSessionDescription(sdp));
-    } catch (error) {
-      console.error("Error setting remote description:", error);
-    }
+  public async setRemoteAnswer(
+    answer: RTCSessionDescriptionInit
+  ): Promise<void> {
+    await this.peer.setRemoteDescription(new RTCSessionDescription(answer));
   }
 
-  addTrack(stream: MediaStream): void {
-    if (!this.peer) this.createPeerConnection();
+  public addStream(stream: MediaStream): void {
     stream.getTracks().forEach((track) => {
-      this.peer!.addTrack(track, stream);
+      this.peer.addTrack(track, stream);
     });
   }
 
-  getRemoteStream(): MediaStream | null {
-    return this.remoteStream;
+  public subscribeToTrack(callback: (stream: MediaStream) => void): void {
+    this.peer.ontrack = (event) => {
+      callback(event.streams[0]);
+    };
   }
 
-  close(): void {
-    if (this.peer) {
-      this.peer.close();
-      this.peer = null;
-      this.remoteStream = null;
-    }
+  public close(): void {
+    this.peer.close();
   }
 }
 
