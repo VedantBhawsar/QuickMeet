@@ -43,7 +43,6 @@ export default function SignInPage() {
         }
       );
 
-      alert(JSON.stringify(data));
       localStorage.setItem("token", data.token);
       setUser(data);
     } catch (error: any) {

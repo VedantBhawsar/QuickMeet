@@ -2,8 +2,8 @@ import { BsGithub, BsTwitter } from "react-icons/bs";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-700 bg-gray-800 py-4">
-      <div className="max-w-6xl mx-auto flex justify-between items-center">
+    <footer className="border-t border-gray-700 bg-gray-800 py-4 px-5">
+      <div className="max-w-7xl mx-auto flex justify-between items-center">
         <h6 className="text-sm text-gray-400 font-semibold">
           © 2024 Video Chat Application
         </h6>

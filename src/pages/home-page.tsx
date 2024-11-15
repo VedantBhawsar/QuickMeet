@@ -31,6 +31,7 @@ export default function HomePage() {
         <h1 className="text-2xl font-bold text-center text-indigo-400 mb-6">
           Welcome to QuickMeet
         </h1>
+
         <p className="text-center text-gray-400 mb-8">
           Join an existing meeting or create a new one.
         </p>

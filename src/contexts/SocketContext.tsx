@@ -12,11 +12,11 @@ export const useSocket = () => {
   if (!context) {
     throw new Error("useSocket must be used within an SocketProvider");
   }
-  return context;
+  return context.socket;
 };
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
-  const socket = io("http://localhost:3001");
+  const socket = io("http://localhost:3000");
 
   return (
     <SocketContext.Provider value={{ socket }}>

@@ -16,14 +16,16 @@ export default function App() {
         <SocketProvider>
           <div className="bg-gray-900 text-white min-h-screen flex flex-col">
             <Header />
-            <main className="flex-grow max-w-6xl  mx-auto flex items-center py-8 px-4">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/m/:meetingId" element={<MeetingPage />} />
-                <Route path="/sign-in" element={<SignInPage />} />
-                <Route path="/sign-up" element={<SignUpPage />} />
-                <Route path="*" element={<ErrorPage />} />
-              </Routes>
+            <main className="flex-grow w-screen justify-center flex">
+              <div className="flex-grow max-w-7xl  flex items-center justify-center py-8 px-4">
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/m/:meetingId" element={<MeetingPage />} />
+                  <Route path="/sign-in" element={<SignInPage />} />
+                  <Route path="/sign-up" element={<SignUpPage />} />
+                  <Route path="*" element={<ErrorPage />} />
+                </Routes>
+              </div>
             </main>
             <Footer />
           </div>
