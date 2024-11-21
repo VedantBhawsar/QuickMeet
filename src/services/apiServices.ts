@@ -4,7 +4,7 @@ console.log(import.meta.env.API_URL);
 
 const authToken = localStorage.getItem("token") || "";
 const axiosApi = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: "https://quickmeet-backend.onrender.com",
   headers: {
     Authorization: authToken ? `Bearer ${authToken}` : "",
   },

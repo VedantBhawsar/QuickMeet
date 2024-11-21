@@ -16,7 +16,7 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
-  const socket = io(import.meta.env.API_URL || "http://localhost:3000");
+  const socket = io("https://quickmeet-backend.onrender.com");
 
   return (
     <SocketContext.Provider value={{ socket }}>

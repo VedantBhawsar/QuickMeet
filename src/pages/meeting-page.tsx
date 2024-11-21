@@ -5,9 +5,7 @@ import { Button } from "../component/header";
 import { Copy } from "lucide-react";
 import toast from "react-hot-toast";
 
-const URL = import.meta.env.API_URL || "htps://localhost:8000";
-console.log(import.meta.env.API_URL);
-console.log(import.meta.env.MODE);
+const URL = "https://quickmeet-backend.onrender.com";
 
 export const Room = ({
   name,
