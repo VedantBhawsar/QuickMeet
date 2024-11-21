@@ -5,7 +5,9 @@ import { Button } from "../component/header";
 import { Copy } from "lucide-react";
 import toast from "react-hot-toast";
 
-const URL = process.env.API_URL || "https://localhost:8000";
+const URL = import.meta.env.API_URL || "htps://localhost:8000";
+console.log(import.meta.env.API_URL);
+console.log(import.meta.env.MODE);
 
 export const Room = ({
   name,
@@ -185,6 +187,38 @@ export const Room = ({
     });
 
     setSocket(socket);
+
+    return () => {
+      console.log("Cleaning up...");
+
+      // Close the socket connection
+      if (socket) {
+        socket.disconnect();
+      }
+
+      // Clean up the sending PeerConnection
+      if (sendingPc) {
+        sendingPc.close();
+        setSendingPc(null);
+      }
+
+      // Clean up the receiving PeerConnection
+      if (receivingPc) {
+        receivingPc.close();
+        setReceivingPc(null);
+      }
+
+      // Clean up remote media stream
+      if (remoteMediaStream) {
+        remoteMediaStream.getTracks().forEach((track) => track.stop());
+        setRemoteMediaStream(null);
+      }
+
+      // Clear the remote video element
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = null;
+      }
+    };
   }, [name]);
 
   useEffect(() => {

@@ -16,7 +16,7 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
-  const socket = io("http://localhost:3000");
+  const socket = io(import.meta.env.API_URL || "http://localhost:3000");
 
   return (
     <SocketContext.Provider value={{ socket }}>
